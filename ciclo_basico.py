@@ -16,8 +16,10 @@ class CBI:
             "SHW": self.shw,
             "INC": self.inc,
             "DEC": self.dec,
+            "PAUSE": self.pause,
             "END": self.end
         }
+        self.running = False
 
     def read_file(self, nombre_archivo) -> list:
         try:
@@ -30,12 +32,18 @@ class CBI:
             return []
         
     def process_instruction(self, instructions) -> None:
+        self.running = True
         for i in instructions:
-            linea = i.split()
-            self.opciones[linea[0]](linea[1], linea[2], linea[3], linea[4])
-
-    def procesador(self, *args, **kwargs): 
-        instruction_type, memory = args[0], args[1]
+            if self.running:
+                linea = i.split()
+                self.opciones[linea[0]](linea[1], linea[2], linea[3], linea[4])
+            
+    def procesador(self, *args, **kwargs):
+        instruction_type, memory, memory2, memory3 = args[0], args[1], None, None
+        if len(args) > 2:
+            memory2 = args[2]
+        if len(args) > 3:
+            memory3 = args[3]
         self.PC = memory
         self.MAR = self.PC
         print(instruction_type +" "+self.MAR)
@@ -50,6 +58,8 @@ class CBI:
             for elemento in self.MEMORIA:
                 if self.MAR in elemento:
                     elemento[self.MAR] = self.MDR
+        self.MAR = memory
+            
         self.MDR = next((objeto[self.MAR] for objeto in self.MEMORIA if self.MAR in objeto), None)
 
     def set(self, *args, **kwargs):
@@ -71,7 +81,16 @@ class CBI:
             self.ALU = self.ACUMULADOR
             self.ACUMULADOR = self.MDR
             self.ACUMULADOR = int(self.ALU) + int(self.ACUMULADOR)
+        else:
+            self.procesador("ADD", memory1)
+            self.ACUMULADOR = self.MDR
+            self.ALU = self.ACUMULADOR
+            self.procesador("ADD", memory2)
+            self.ACUMULADOR = self.MDR
+            self.ACUMULADOR = int(self.ACUMULADOR) + int(self.ALU)
 
+            if (memory3 != "NULL"):
+                self.str(memory3)
 
     def str(self, *args, **kwargs):
         self.procesador("STORE", args[0])
@@ -96,10 +115,14 @@ class CBI:
                     print("El valor de ", args[0], " es", i.get(args[0]))
 
     def pause(self, *args, **kwargs):
-        print("Pause ejecutado") 
+        print("Pause ejecutado")
+        self.running = False
 
     def dec(self, *args, **kwargs):
         self.procesador("LOAD", args[0])
+        self.ACUMULADOR = int(self.ACUMULADOR) - 1
+        print("Se ha reducido en 1 el acumulador")
+        print("El acumulador es", self.ACUMULADOR)
 
     def inc(self, *args, **kwargs):
         self.procesador("LOAD", args[0])
@@ -110,11 +133,27 @@ class CBI:
     def end(self, *args, **kwargs):
         print("End ejecutado")
         print( self.ACUMULADOR)
+        self.running = False
 
-    
-cpu = CBI()
-instrucciones = cpu.read_file("programa2.txt")
-if instrucciones:
-    cpu.process_instruction(instrucciones)
+if __name__ == "__main__":
+    cpu = CBI()
+    while True:
+        print("CICLO BASICO DE INSTRUCCION")
+        print("1. Programa 1")
+        print("2. Programa 2")
+        print("3. Programa 3")
+        print("4. Programa 4")
+        print("5. Salir")
+        num = int(input("Digite que programa quiere ejecutar: "))
+
+        if num >= 1 and num <= 5:
+            if num == 5:
+                break
+            programa = f"programa{num}.txt"
+        
+        instrucciones = cpu.read_file(programa)
+        if instrucciones:
+            cpu.process_instruction(instrucciones)
+
     
     
